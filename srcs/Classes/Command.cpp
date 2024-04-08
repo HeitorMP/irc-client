@@ -6,7 +6,7 @@
 /*   By: hmaciel- <hmaciel-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/03 16:23:55 by hmaciel-          #+#    #+#             */
-/*   Updated: 2024/04/04 23:13:20 by hmaciel-         ###   ########.fr       */
+/*   Updated: 2024/04/08 19:42:48 by hmaciel-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,6 @@ Command::Command(std::string response)
                 break;
             }
         }
-        //pos++;
     }
 }
 
@@ -86,36 +85,36 @@ std::string    Command::getData() const
     return (this->data);
 }
 
-std::vector<std::string> Command::split(const std::string &request)
-{
-    std::stringstream ss(request);  
-    std::string word;
-    std::vector<std::string> ret;
-    while (ss >> word)
-    {
-        ret.push_back(word);
-    }
+// std::vector<std::string> Command::split(const std::string &request)
+// {
+//     std::stringstream ss(request);  
+//     std::string word;
+//     std::vector<std::string> ret;
+//     while (ss >> word)
+//     {
+//         ret.push_back(word);
+//     }
 
-    return (ret);
-}
+//     return (ret);
+// }
 
-std::string Command::rejoin(std::vector<std::string> splited)
-{
-    std::string ret = "";
+// std::string Command::rejoin(std::vector<std::string> splited)
+// {
+//     std::string ret = "";
     
-    if (splited.size() > 0)
-    {
-        size_t i = 0;
+//     if (splited.size() > 0)
+//     {
+//         size_t i = 0;
 
-        for (i = 0; i < splited.size() - 1; i++)
-        {
-            ret += splited[i] + " ";
-        }
-        ret += splited[i] + "\r\n";
-    }
+//         for (i = 0; i < splited.size() - 1; i++)
+//         {
+//             ret += splited[i] + " ";
+//         }
+//         ret += splited[i] + "\r\n";
+//     }
     
-    return (ret);
-}
+//     return (ret);
+// }
 
 std::map<std::string, std::string> Command::generateCommandMap()
 {
@@ -128,19 +127,6 @@ std::map<std::string, std::string> Command::generateCommandMap()
     return (map);
 }
 
-// std::vector<std::string>    Command::getUsersFromJoin(std::vector<std::string> cmd)
-// {
-//     std::vector<std::string> ret;
-//     if (cmd[5][0] == ':')
-//         cmd[5].erase(0, 1);
-    
-//     for (size_t i = 5; i < cmd.size(); i++)
-//     {
-//         ret.push_back(cmd[i]);
-//     }
-//     return (ret);
-// }
-
 std::ostream& operator<<(std::ostream& os, Command& cmd)
 {
     os << "Prefix: " << cmd.getPrefix() << std::endl;
@@ -151,3 +137,58 @@ std::ostream& operator<<(std::ostream& os, Command& cmd)
     }
     return os;
 }
+
+
+bool        Command::execute(boost::asio::ip::tcp::socket& socket, User *user)
+{
+    boost::system::error_code error;
+    if(this->getPrefix() == "PING")
+        {
+            std::string sub = this->getCommand().substr(1);
+            std::string response = "PONG " + sub + "\r\n";
+          
+            size_t bytes_transferred = socket.write_some(boost::asio::buffer(response), error); // no PING o ping eh prefixo e o parametro eh o command
+
+            if (error) {
+                std::cerr << "Erro ao enviar dados: " << error.message() << std::endl;
+            }
+        }
+        else if(executeChannelCommands(this, user))
+        {
+            ;
+            // std::cout << "executou join commands" << std::endl;
+        }
+        else if (this->getCommand() == "PRIVMSG")
+        {
+            int pos = this->getPrefix().find("!");
+            std::string msgOwner = this->getPrefix().substr(0,pos);
+            std::string msgFrom = this->getParams()[0];
+            std::string message = this->getData();
+            std::string toLog;
+            if (msgFrom[0] != '#')
+            {
+                toLog = "[PRIVATE][" + msgOwner + "] - says in private: " + message;
+            }
+            else
+            {
+                toLog = "[" + msgOwner + "] - says: " + message;
+            }
+            user->getCurrentChannel()->addMessage(toLog);
+        }
+        else if(this->getCommand() == "001")
+        {
+            std::string toLog = this->getData();
+            user->getCurrentChannel()->addMessage(toLog);
+        }
+        else
+        {
+            ;
+            // std::cout << "entrou no else\n";
+            // std::cout << cmd[0] << std::endl;
+        }
+        return (true);
+}
+
+
+        
+        

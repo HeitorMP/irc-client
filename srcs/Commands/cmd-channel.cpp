@@ -6,21 +6,21 @@
 /*   By: hmaciel- <hmaciel-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/05 11:15:04 by hmaciel-          #+#    #+#             */
-/*   Updated: 2024/04/05 17:09:45 by hmaciel-         ###   ########.fr       */
+/*   Updated: 2024/04/08 19:24:22 by hmaciel-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cmd-proto.hpp"
 #include <algorithm>
 #include "User.hpp"
-
+#include "utils.hpp"
 
 bool    executeChannelCommands(Command *cmd, User *user)
 {
     std::vector<std::string> list = {"JOIN", "332", "353", "366"};
     std::string commandName = cmd->getCommand();
 
-    if (find(list.begin(), list.end(), commandName) == list.end()) 
+    if (find(list.begin(), list.end(), commandName) == list.end())
     {
         return (false);
     }
@@ -51,7 +51,7 @@ bool    executeChannelCommands(Command *cmd, User *user)
         std::vector<std::string>    params = cmd->getParams();
         std::string                 channelName = params[2]; // check for #
 
-        std::vector<std::string> users = Command::split(cmd->getData());
+        std::vector<std::string> users = split(cmd->getData());
         Channel *temp = new Channel(channelName, users);
         user->setNewChannel(temp);
         user->setCurrentChannel(temp);

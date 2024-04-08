@@ -9,7 +9,8 @@ SRCS		:= main.cpp \
 			   Classes/User.cpp \
 			   Classes/Command.cpp \
 			   Classes/Window.cpp \
-			   Commands/cmd-channel.cpp
+			   Commands/cmd-channel.cpp \
+			   Utils/utils.cpp
 
 OBJS		:= ${SRCS:%.cpp=$(OBJSDIR)/%.o}
 

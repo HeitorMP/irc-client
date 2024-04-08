@@ -6,7 +6,7 @@
 /*   By: hmaciel- <hmaciel-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/07 19:49:19 by hmaciel-          #+#    #+#             */
-/*   Updated: 2024/04/08 13:33:17 by hmaciel-         ###   ########.fr       */
+/*   Updated: 2024/04/08 19:54:37 by hmaciel-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,12 +90,12 @@ std::string Window::getUserInput(std::string const &prompt)
     char str[100] = {0};
 
     mvwprintw(prompt_scr, 1, 1, prompt.c_str());
-    mvwgetstr(prompt_scr, 1, prompt.size() + 3, str);
+    mvwgetstr(prompt_scr, 1, prompt.size() + 1, str);
 
     size_t length = strlen(str);
     if (length > 0 && str[length - 1] == '\n')
         snprintf(str + length - 1, sizeof(str) - length + 1, "\r\n");
-    
+
     return(str);
 }
 

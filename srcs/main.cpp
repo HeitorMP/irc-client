@@ -5,8 +5,23 @@
 #include <mutex>
 #include "User.hpp"
 #include "Window.hpp"
+#include "Command.hpp"
 
 std::atomic<bool> stop_server(false);
+
+
+std::vector<Command *>    getCommandList(std::string response)
+{
+    std::vector<Command *>  cmds;
+
+    std::stringstream   ss(response);
+    std::string         line;
+    while (std::getline(ss, line)) {
+        // generate a vector of commands, each line is a command.
+        cmds.push_back(new Command(line));
+    }
+    return (cmds);
+}
 
 void receiveFromServer(boost::asio::ip::tcp::socket& socket, User *user1, Window *screen)
 {
@@ -22,17 +37,14 @@ void receiveFromServer(boost::asio::ip::tcp::socket& socket, User *user1, Window
         size_t bytesRead = socket.read_some(boost::asio::buffer(tempBuffer, BUFFER_SIZE), error);
         if (error == boost::asio::error::eof) {
             std::cout << "Conexão fechada pelo servidor\n";
-            stop_server = 1;
+            stop_server = true;
             break;
         } else if (error) {
             std::cerr << "Erro ao ler do socket: " << error.message() << std::endl;
-            stop_server = 1;
+            stop_server = true;
             break;
         }
-        if (bytesRead == 0)
-        {
-            std::cout << "aqui\n";
-        }
+
         buffer.append(tempBuffer, bytesRead);
 
         size_t newlinePos;
@@ -40,33 +52,29 @@ void receiveFromServer(boost::asio::ip::tcp::socket& socket, User *user1, Window
             std::string message = buffer.substr(0, newlinePos + 1);
 
             fullMessage += message + "\r\n";
-            // Remover a mensagem do buffer
             buffer.erase(0, newlinePos + 1);
         }
 
-        // if(cmd->getPrefix() == "PING")
-        // {
-        //     // std::cout << "entrou no ping\n";
-        //     boost::system::error_code error;
+        std::vector<Command*>   cmds = getCommandList(fullMessage);
 
-        //     std::string sub = cmd->getCommand().substr(1);
-        //     std::string response = "PONG " + sub + "\r\n";
-          
-        //     size_t bytes_transferred = serverFd.write_some(boost::asio::buffer(response), error); // no PING o ping eh prefixo e o parametro eh o command
-
-        //     if (error) {
-        //         std::cerr << "Erro ao enviar dados: " << error.message() << std::endl;
-        //     }
-
-        user1->executeCommand(fullMessage);
+        for(auto cmd: cmds)
+        {
+            cmd->execute(socket, user1);
+        }
         fullMessage = "";
 
         screen->redraw();
-        mvwprintw(screen->prompt_scr, 1, 10, fullMessage.c_str());
-        mvwprintw(screen->prompt_scr, 1, 1, (user1->getCurrentChannel()->getName() + ": ").c_str());
-
+        std::string prompt = user1->getCurrentChannel()->getName() + ": ";
+        mvwprintw(screen->prompt_scr, 1, 1, prompt.c_str());
         screen->renderChatScreen(user1);
         screen->refreshAll();
+        wmove(screen->prompt_scr, 1, prompt.size());
+        wrefresh(screen->prompt_scr);
+
+        for(auto cmd: cmds)
+        {
+            delete (cmd);
+        }
     }
 }
 
@@ -143,23 +151,29 @@ int main(int argc, char *argv[])
 
         std::string prompt = user1->getCurrentChannel()->getName() + ": ";
         std::string userInput = screen.getUserInput(prompt);
-
+        wmove(screen.prompt_scr, 1, prompt.size());
+        wrefresh(screen.prompt_scr);
+        wrefresh(screen.chat_scr);
         if (!userInput.empty())
         {
-            if (userInput == "/QUIT")
+            if (userInput.compare(0, 5, "/QUIT") == 0)
             {
-                stop_server = 1;
+                stop_server = true;
                 break;
             }
             std::string request = user1->prepRequest(userInput);
+            
             sendRequest(socket, request);
         }
         screen.renderChatScreen(user1);
         screen.refreshAll();
     }
-    endwin();
     serverThread.join();
     socket.close();
+    delwin(screen.chat_scr);
+    delwin(screen.prompt_scr);
+    delwin(screen.list_scr);
+    endwin();
 
     return 0;
 }
