@@ -6,13 +6,19 @@
 /*   By: hmaciel- <hmaciel-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/07 19:46:47 by hmaciel-          #+#    #+#             */
-/*   Updated: 2024/04/07 20:54:24 by hmaciel-         ###   ########.fr       */
+/*   Updated: 2024/04/08 11:39:18 by hmaciel-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 # include <ncurses.h>
+# include <iostream>
+# include <vector>
+# include <cstring>
+# include "macros.hpp"
+# include "User.hpp"
+
 
 class Window
 {
@@ -23,9 +29,9 @@ class Window
 
 
     public:
-        WINDOW *chat;
-        WINDOW *prompt;
-        WINDOW *list;
+        WINDOW *chat_scr;
+        WINDOW *prompt_scr;
+        WINDOW *list_scr;
         
         Window();
         ~Window();
@@ -33,5 +39,10 @@ class Window
         void    draw_borders(WINDOW *screen);
         void    refreshAll();
         void    redraw();
+
+        void            initColors();
+        void            renderChatScreen(User *usr);
+        std::string     getUserInput(std::string const &pr);
+
 
 };

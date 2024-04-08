@@ -6,7 +6,7 @@
 /*   By: hmaciel- <hmaciel-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/30 16:31:25 by hmaciel-          #+#    #+#             */
-/*   Updated: 2024/04/07 22:56:02 by hmaciel-         ###   ########.fr       */
+/*   Updated: 2024/04/08 13:31:53 by hmaciel-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,21 +72,7 @@ void    User::setNewChannel(Channel * newChannel)
     this->channels.push_back(newChannel);
 }
 
-bool    User::sendRequest(boost::asio::ip::tcp::socket& serverFd)
-{
-    boost::system::error_code error;
-    // std::cout << "this request: " << this->request << std::endl;
-    size_t bytes_transferred = serverFd.write_some(boost::asio::buffer(this->request), error);
-
-    if (error) {
-        std::cerr << "Erro ao enviar dados: " << error.message() << std::endl;
-        return (false);
-    }
-    return (true);
-
-}
-
-bool    User::prepRequest(std::string req)
+std::string    User::prepRequest(std::string req)
 {
     if (req[0] == '/')
     {
@@ -95,7 +81,7 @@ bool    User::prepRequest(std::string req)
         
         if (it == commandMap.end())
         {
-            return (false);
+            return (nullptr);
         }
         splitedCmd[0] = it->second;
         req = Command::rejoin(splitedCmd);
@@ -103,19 +89,19 @@ bool    User::prepRequest(std::string req)
     }
     else
     {
-
         if (!req.empty())
         {
-            std::string channelName = this->getCurrentChannel()->getName();
-            std::string toLog = "[" + channelName + "] - you say: " + req;
+            std::string toLog = "[" + this->nick + "] - you say: " + req;
             this->currentChannel->addMessage(toLog);
-            this->request = "PRIVMSG " + this->currentChannel->getName() + " :" + req + "\r\n";        
+            this->request = "PRIVMSG " + this->currentChannel->getName() + " :" + req + "\r\n";      
         }
+        else
+            return (nullptr);
     }
-    return (true);
+    return (this->request);
 }
 
-void    User::executeCommand(boost::asio::ip::tcp::socket& serverFd, std::string response) // provisorio
+void    User::executeCommand(std::string response) // provisorio
 {
     std::vector<Command *>  cmds;
 
@@ -128,38 +114,33 @@ void    User::executeCommand(boost::asio::ip::tcp::socket& serverFd, std::string
     }
 
     for (auto cmd: cmds) {
-        if(cmd->getPrefix() == "PING")
-        {
-            // std::cout << "entrou no ping\n";
-            boost::system::error_code error;
-
-            std::string sub = cmd->getCommand().substr(1);
-            std::string response = "PONG " + sub + "\r\n";
-          
-            size_t bytes_transferred = serverFd.write_some(boost::asio::buffer(response), error); // no PING o ping eh prefixo e o parametro eh o command
-
-            if (error) {
-                std::cerr << "Erro ao enviar dados: " << error.message() << std::endl;
-            }
-        }
-        else if(executeChannelCommands(cmd, this))
+        
+        if(executeChannelCommands(cmd, this))
         {
             ;
             // std::cout << "executou join commands" << std::endl;
         }
-        else if (cmd->getCommand() == "PRIVMSG" || cmd->getCommand() == "NOTICE")
+        else if (cmd->getCommand() == "PRIVMSG")
         {
             int pos = cmd->getPrefix().find("!");
             std::string msgOwner = cmd->getPrefix().substr(0,pos);
-            std::string msgFromChannel = cmd->getParams()[0];
+            std::string msgFrom = cmd->getParams()[0];
             std::string message = cmd->getData();
-            std::string response = "[" + msgFromChannel + "] - " + msgOwner + " says: " + message;
-            this->currentChannel->addMessage(response);
-            // std::cout << response << std::endl;
+            std::string toLog;
+            if (msgFrom[0] != '#')
+            {
+                toLog = "[PRIVATE][" + msgOwner + "] - says in private: " + message;
+            }
+            else
+            {
+                toLog = "[" + msgOwner + "] - says: " + message;
+            }
+            this->currentChannel->addMessage(toLog);
         }
         else if(cmd->getCommand() == "001")
         {
-            this->currentChannel->addMessage(response);
+            std::string toLog = cmd->getData();
+            this->currentChannel->addMessage(toLog);
         }
         else
         {
